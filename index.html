@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Page Title</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+</head>
+
+<body>
+  <input type="file" value="upload" id="bimg" accept="image/png, image/jpeg">
+  <input type="file" value="upload" id="wimg" accept="image/png, image/jpeg">
+  <button id="build">生成图片</button>
+  <button id="btn">转换背景色颜色</button>
+  <br/>
+  <img id="img" width="300">
+  <script>
+    var bimg = null
+    var wimg = null
+    document.getElementById('bimg').onchange = function (e) {
+      readFile(this.files[0], function (img) {
+        bimg = img
+      })
+    }
+    document.getElementById('wimg').onchange = function (e) {
+      readFile(this.files[0], function (img) {
+        wimg = img
+      })
+    }
+    document.getElementById('build').onclick = function (e) {
+      var src = build()
+      document.getElementById('img').src = src
+    }
+    document.getElementById('btn').onclick = function () {
+      var img = document.getElementsByTagName('img')[0]
+      let color = img.style.background
+      if (color === 'black') {
+        img.style.background = 'white'
+      } else {
+        img.style.background = 'black'
+      }
+    }
+
+
+    function readFile(file, cb) {
+      var reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = function (e) {
+        var img = new Image()
+        img.crossOrigin = 'Anonymous';
+        img.src = e.target.result;
+        img.onload = function () {
+          cb(img)
+        }
+      };
+    }
+    function build() {
+      if (!bimg | !wimg) {
+        alert('请上传图片')
+        return
+      }
+      var maxWidth = bimg.width > wimg.width ? bimg.width : wimg.width
+      var maxHeight = bimg.height > wimg.height ? bimg.height : wimg.height
+      var bit1 = getBit(bimg, maxWidth, maxHeight)
+      var bit2 = getBit(wimg, maxWidth, maxHeight)
+      var buffer = new ArrayBuffer(maxWidth * maxHeight * 4)
+      var imgPixels = new Uint8ClampedArray(buffer)
+      var blackPixel = true
+      for (var y = 0; y < maxHeight; y++) {
+        blackPixel = !blackPixel
+        var isb = blackPixel
+        for (var x = 0; x < maxWidth; x++) {
+          isb = !isb;
+          var writePixel = isb ? bit1 : bit2
+          var i = (y * 4) * maxWidth + x * 4;
+          var gray = (writePixel[i] * 19595 + writePixel[i + 1] * 38469 + writePixel[i + 2] * 7472) >> 16
+          imgPixels[i] = isb ? 0 : 255;
+          imgPixels[i + 1] = isb ? 0 : 255;
+          imgPixels[i + 2] = isb ? 0 : 255;
+          imgPixels[i + 3] = isb ? (255 - gray) : gray;
+        }
+      }
+      var canvas = document.createElement('canvas');
+      var canvasContext = canvas.getContext('2d');
+      canvas.width = maxWidth;
+      canvas.height = maxHeight;
+      canvasContext.putImageData(new ImageData(imgPixels, maxWidth, maxHeight), 0, 0, 0, 0, maxWidth, maxHeight);
+      return canvas.toDataURL();
+    }
+
+    function getBit(imgObj, maxWidth, maxHeight) {
+      var canvas = document.createElement('canvas');
+      var canvasContext = canvas.getContext('2d');
+      canvas.width = maxWidth;
+      canvas.height = maxHeight;
+      canvasContext.drawImage(imgObj, (maxWidth - imgObj.width) / 2, (maxHeight - imgObj.height) / 2);
+      return canvasContext.getImageData(0, 0, maxWidth, maxHeight).data
+    }
+  </script>
+</body>
+
+</html>
